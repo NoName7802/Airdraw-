@@ -2,90 +2,137 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Neon Air Canvas</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <style>
+        :root {
+            --bg-color: #0a0a0c;
+            --panel-bg: rgba(22, 22, 26, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --accent-glow: #00ffcc;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background-color: #121212;
+            background-color: var(--bg-color);
             color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             height: 100vh;
+            width: 100vw;
+            position: fixed; /* Prevents bounce scrolling on mobile */
         }
 
+        /* Fixed Mobile-Optimized Header Panel */
         #ui-container {
             position: absolute;
-            top: 20px;
+            top: 16px;
+            left: 16px;
+            right: 16px;
             z-index: 10;
-            background: rgba(30, 30, 30, 0.75);
-            backdrop-filter: blur(10px);
-            padding: 15px 25px;
-            border-radius: 30px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 12px 20px;
+            border-radius: 20px;
             display: flex;
-            gap: 20px;
+            justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-wrapper {
+            display: flex;
+            gap: 16px;
+            align-items: center;
         }
 
         .control-group {
             display: flex;
-            align-items: center;
-            gap: 10px;
+            flex-direction: column;
+            gap: 4px;
         }
 
         label {
-            font-size: 0.85rem;
+            font-size: 0.65rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #ccc;
+            letter-spacing: 1.5px;
+            color: #8e8e93;
+            font-weight: 700;
+        }
+
+        /* Customizing elements for easy finger-tapping */
+        .color-picker-wrapper {
+            position: relative;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.2);
+            overflow: hidden;
         }
 
         input[type="color"] {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            width: 46px;
+            height: 46px;
             border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
             background: none;
+            cursor: pointer;
         }
 
         input[type="range"] {
-            accent-color: #00ffcc;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 90px;
+            background: rgba(255, 255, 255, 0.1);
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 0 8px rgba(255,255,255,0.5);
             cursor: pointer;
         }
 
+        /* Clean Minimalist Status Badge */
         #status-badge {
-            padding: 6px 14px;
-            border-radius: 15px;
-            font-weight: bold;
-            font-size: 0.85rem;
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.75rem;
             text-transform: uppercase;
-            transition: all 0.3s ease;
+            letter-spacing: 1px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .status-draw { background: #00ffcc; color: #000; box-shadow: 0 0 10px #00ffcc; }
-        .status-erase { background: #ff0055; color: #fff; box-shadow: 0 0 10px #ff0055; }
-        .status-pause { background: #ffcc00; color: #000; box-shadow: 0 0 10px #ffcc00; }
-        .status-loading { background: #555; color: #fff; }
+        .status-draw { background: rgba(0, 255, 204, 0.15); color: #00ffcc; border: 1px solid rgba(0, 255, 204, 0.3); }
+        .status-erase { background: rgba(255, 0, 85, 0.15); color: #ff0055; border: 1px solid rgba(255, 0, 85, 0.3); }
+        .status-pause { background: rgba(255, 204, 0, 0.15); color: #ffcc00; border: 1px solid rgba(255, 204, 0, 0.3); }
+        .status-loading { background: rgba(255, 255, 255, 0.05); color: #8e8e93; border: 1px solid var(--border-color); }
 
         #canvas-container {
             position: relative;
             width: 100vw;
             height: 100vh;
+            background-color: var(--bg-color);
         }
 
-        /* Mirror the video and drawing canvas to make it intuitive */
+        /* Mirror elements layout */
         video, #paintCanvas {
             position: absolute;
             top: 0;
@@ -101,24 +148,31 @@
             background: transparent;
         }
 
+        /* HIDDEN Video: Solves the gray screen issue completely while keeping tracking functional */
         video {
             z-index: 1;
-            opacity: 0.15; /* Keeps the background dark for neon pop */
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
     <div id="ui-container">
-        <div class="control-group">
-            <label for="colorPicker">Color</label>
-            <input type="color" id="colorPicker" value="#00ffcc">
+        <div class="controls-wrapper">
+            <div class="control-group">
+                <label for="colorPicker">Color</label>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="colorPicker" value="#00ffcc">
+                </div>
+            </div>
+            <div class="control-group">
+                <label for="brushThickness">Size</label>
+                <input type="range" id="brushThickness" min="5" max="45" value="18">
+            </div>
         </div>
-        <div class="control-group">
-            <label for="brushThickness">Size</label>
-            <input type="range" id="brushThickness" min="5" max="40" value="15">
-        </div>
-        <div id="status-badge" class="status-loading">Loading AI...</div>
+        <div id="status-badge" class="status-loading">Initializing AI...</div>
     </div>
 
     <div id="canvas-container">
@@ -138,25 +192,25 @@
         let lastX = 0;
         let lastY = 0;
 
-        // Resize canvas dynamically to match window sizing
         function resizeCanvas() {
             canvasElement.width = window.innerWidth;
             canvasElement.height = window.innerHeight;
-            // Clear or retain canvas data here if needed.
+            setupCanvasProperties();
+        }
+
+        function setupCanvasProperties() {
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
         }
+        
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Helper: Calculate distance between two landmarks
         function getDistance(pt1, pt2) {
             return Math.hypot(pt1.x - pt2.x, pt1.y - pt2.y);
         }
 
-        // Process MediaPipe results
         function onResults(results) {
-            // Update loading status if hands are tracking
             if (statusBadge.classList.contains('status-loading')) {
                 statusBadge.textContent = 'Ready';
                 statusBadge.className = 'status-pause';
@@ -168,24 +222,19 @@
 
             const landmarks = results.multiHandLandmarks[0];
             
-            // Extract core tracking points (normalized 0.0 to 1.0)
             const wrist = landmarks[0];
-            const thumbTip = landmarks[4];
             const indexTip = landmarks[8];
             const indexPip = landmarks[6];
             const middleTip = landmarks[12];
             const ringTip = landmarks[16];
             const pinkyTip = landmarks[20];
 
-            // Convert normalized index tip to actual pixel canvas coordinates
+            // Convert coordinates smoothly
             const currentX = indexTip.x * canvasElement.width;
             const currentY = indexTip.y * canvasElement.height;
 
-            // --- GESTURE DETECTION LOGIC ---
-            
-            // 1. Check for Folded/Closed Fingers (Distance to wrist)
-            // If tips are close to the wrist, they are curled in.
-            const baseDist = getDistance(wrist, indexPip); // Reference scale
+            // Gesture logic scales to tracking depth
+            const baseDist = getDistance(wrist, indexPip); 
             const isIndexExtended = getDistance(wrist, indexTip) > baseDist;
             const isMiddleExtended = getDistance(wrist, middleTip) > baseDist;
             const isRingExtended = getDistance(wrist, ringTip) > baseDist;
@@ -197,12 +246,9 @@
                 gesture = 'draw';
             } else if (isIndexExtended && isMiddleExtended && isRingExtended && isPinkyExtended) {
                 gesture = 'erase';
-            } else if (!isIndexExtended && !isMiddleExtended && !isRingExtended && !isPinkyExtended) {
-                gesture = 'pause';
             }
 
-            // --- EXECUTE ACTIONS BASED ON GESTURE ---
-            
+            // Execute Actions
             if (gesture === 'draw') {
                 statusBadge.textContent = 'Drawing';
                 statusBadge.className = 'status-draw';
@@ -212,17 +258,17 @@
                     ctx.moveTo(lastX, lastY);
                     ctx.lineTo(currentX, currentY);
 
-                    // Neon Glow Effect Settings
                     const baseColor = colorPicker.value;
                     ctx.strokeStyle = baseColor;
                     ctx.lineWidth = brushThickness.value;
+                    
+                    // High performance crisp neon glow configuration
                     ctx.shadowColor = baseColor;
-                    ctx.shadowBlur = parseInt(brushThickness.value) * 1.5;
+                    ctx.shadowBlur = parseInt(brushThickness.value) * 1.2;
                     
                     ctx.stroke();
                 }
                 
-                // Track historical coordinate for clean interpolation line drawing
                 lastX = currentX;
                 lastY = currentY;
                 isDrawing = true;
@@ -231,11 +277,9 @@
                 statusBadge.textContent = 'Erasing';
                 statusBadge.className = 'status-erase';
                 
-                // Erase by clearing a local rect around index point position
-                const eraseRadius = parseInt(brushThickness.value) * 3; 
+                const eraseRadius = parseInt(brushThickness.value) * 3.5; 
                 ctx.save();
-                // Reset shadow properties for clean cuts
-                ctx.shadowBlur = 0; 
+                ctx.shadowBlur = 0; // Cut cleanly without shadow bleeding
                 ctx.clearRect(currentX - eraseRadius/2, currentY - eraseRadius/2, eraseRadius, eraseRadius);
                 ctx.restore();
                 
@@ -248,7 +292,6 @@
             }
         }
 
-        // Initialize MediaPipe Hands pipeline
         const hands = new Hands({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
@@ -256,26 +299,28 @@
         hands.setOptions({
             maxNumHands: 1,
             modelComplexity: 1,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.7
+            minDetectionConfidence: 0.65,
+            minTrackingConfidence: 0.65
         });
 
         hands.onResults(onResults);
 
-        // Initialize and lock-in native camera utils wrapper
+        // Optimizing video constraints to run smoothly on front-facing mobile cameras
         const camera = new Camera(videoElement, {
             onFrame: async () => {
                 await hands.send({ image: videoElement });
             },
-            width: 1280,
-            height: 720
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: 'user'
         });
         
         camera.start().catch(err => {
-            statusBadge.textContent = 'Camera Error';
+            statusBadge.textContent = 'Error';
             statusBadge.className = 'status-erase';
             console.error(err);
         });
     </script>
 </body>
 </html>
+
